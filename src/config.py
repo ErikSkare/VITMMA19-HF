@@ -9,3 +9,5 @@ LEARNING_RATE = 0.001
 # Paths
 DATA_DIR = "/app/data"
 MODEL_SAVE_PATH = "/app/model.pth"
+INDIVIDUAL_DATA_PATH = './output/individual_data.csv'
+CONSENSUS_DATA_PATH = './output/consensus_data.csv'
