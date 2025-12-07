@@ -1,0 +1,13 @@
+torch==2.2.0+cpu
+torchtext==0.17.0+cpu
+torchmetrics==1.8.2
+
+matplotlib==3.10.7
+seaborn==0.13.2
+jupyter==1.1.1
+
+numpy==1.26.4
+pandas==2.3.3
+scikit-learn==1.7.2
+
+wandb==0.23.1
