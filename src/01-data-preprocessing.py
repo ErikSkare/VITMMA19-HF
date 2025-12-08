@@ -2,7 +2,7 @@
 # This script handles data loading, cleaning, and transformation.
 import pandas as pd
 from utils import setup_logger
-from config import INDIVIDUAL_DATA_PATH, CONSENSUS_DATA_PATH, INDIVIDUAL_CLEANED_PATH, CONSENSUS_CLEANED_PATH
+from config import INDIVIDUAL_RAW_PATH, CONSENSUS_RAW_PATH, TRAIN_DATA_PATH, TEST_DATA_PATH
 
 logger = setup_logger()
 
@@ -27,29 +27,37 @@ def clean_consensus(df: pd.DataFrame) -> pd.DataFrame:
 
 def remove_leakage(df: pd.DataFrame, ref_df: pd.DataFrame) -> pd.DataFrame:
     df, affected = watch(df, lambda df: df[~df['text'].isin(ref_df['text'])].reset_index(drop=True))
-    logger.info(f"Deleted {affected} leaking rows from individual dataset")
+    logger.info(f"Deleted {affected} leaking rows")
+    return df
+
+def append_majority(df: pd.DataFrame):
+    ratings = df.filter(like="rating_")
+    tie_count = ((ratings.values == ratings.max(axis=1).values[:, None]).sum(axis=1) > 1).sum()
+    logger.info("Calculating majority ratings (choosing first on tie)")
+    logger.info(f"Number of rows with tie in majority votes: {tie_count}")
+    df["majority_rating"] = ratings.values.argmax(axis=1) + 1
     return df
 
 def preprocess():
     logger.info("Preprocessing data...")
 
-    logger.info(f"Load in: {INDIVIDUAL_DATA_PATH}")
-    individual_df = pd.read_csv(INDIVIDUAL_DATA_PATH)
-    logger.info(f"Load in: {CONSENSUS_DATA_PATH}")
-    consensus_df = pd.read_csv(CONSENSUS_DATA_PATH)
+    logger.info(f"Load in: {CONSENSUS_RAW_PATH}")
+    consensus_df = pd.read_csv(CONSENSUS_RAW_PATH)
+    logger.info(f"Load in: {INDIVIDUAL_RAW_PATH}")
+    individual_df = pd.read_csv(INDIVIDUAL_RAW_PATH)
 
-    logger.info("Cleaning individual dataset...")
-    individual_df = clean_individual(individual_df)
-
-    logger.info("Cleaning consensus dataset...")
+    logger.info("Processing consensus dataset...")
     consensus_df = clean_consensus(consensus_df)
+    consensus_df = append_majority(consensus_df)
 
+    logger.info("Processing individual dataset...")
+    individual_df = clean_individual(individual_df)
     individual_df = remove_leakage(individual_df, consensus_df)
 
-    individual_df.to_csv(INDIVIDUAL_CLEANED_PATH, index=False)
-    consensus_df.to_csv(CONSENSUS_CLEANED_PATH, index=False)
-    logger.info(f"Created {INDIVIDUAL_CLEANED_PATH}")
-    logger.info(f"Created {CONSENSUS_CLEANED_PATH}")
+    individual_df.to_csv(TRAIN_DATA_PATH, index=False)
+    consensus_df.to_csv(TEST_DATA_PATH, index=False)
+    logger.info(f"Created {TRAIN_DATA_PATH} from processed individual dataset")
+    logger.info(f"Created {TEST_DATA_PATH} from processed consensus dataset")
 
 if __name__ == "__main__":
     preprocess()
