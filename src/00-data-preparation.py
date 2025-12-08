@@ -1,3 +1,5 @@
+# Data preparing script
+# This script transforms raw dataset into appropriate format.
 import glob
 import json
 import pandas as pd
