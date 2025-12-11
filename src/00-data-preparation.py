@@ -1,14 +1,24 @@
 # Data preparing script
 # This script transforms raw dataset into appropriate format.
-import argparse
 import os
 import glob
 import json
 import pandas as pd
+import subprocess
 from utils import setup_logger
-from config import INDIVIDUAL_RAW_PATH, CONSENSUS_RAW_PATH
+from config import DATA_DIR, INDIVIDUAL_RAW_PATH, CONSENSUS_RAW_PATH, DOWNLOAD_DATA_URL
 
 logger = setup_logger()
+
+def download_data():
+    logger.info("Downloading raw dataset...")
+    output_path = os.path.join(DATA_DIR, 'raw.zip')
+    subprocess.run(["wget", "-q", DOWNLOAD_DATA_URL, "-O", output_path])
+
+def unzip_data():
+    logger.info("Unzipping raw dataset...")
+    output_path = os.path.join(DATA_DIR, 'raw.zip')
+    subprocess.run(["unzip", "-q", output_path, "-d", DATA_DIR])
 
 def safe_get(entry, path, dtype):
     try: 
@@ -38,12 +48,14 @@ def merge_paired(*dfs) -> pd.DataFrame:
     df = pd.get_dummies(df, columns=['rating'])
     return df.groupby('text', as_index=False).sum().sort_values(by='text')
 
-def prepare(data_folder: str):
+def prepare():
     logger.info('Preparing dataset...')
-    logger.info(f'Data folder: {data_folder}')
 
-    all_paths = glob.glob(os.path.join(data_folder, '**', '*.json'))
-    consensus_paths = glob.glob(os.path.join(data_folder, 'consensus', '*.json'), )
+    download_data()
+    unzip_data()
+
+    all_paths = glob.glob(os.path.join(DATA_DIR, 'legaltextdecoder', '**', '*.json'))
+    consensus_paths = glob.glob(os.path.join(DATA_DIR, 'legaltextdecoder', 'consensus', '*.json'), )
     individual_paths = [p for p in all_paths if p not in consensus_paths]
 
     logger.info(f"Found: {len(individual_paths)} individual files, {len(consensus_paths)} consensus files.")
@@ -64,13 +76,4 @@ def prepare(data_folder: str):
     logger.info('Preparation is finished...')
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Prepare dataset")
-    parser.add_argument(
-        '--data-folder', 
-        type=str, 
-        default='./data',
-        help='Path to the folder containing raw data (defaults to ./data)'
-    )
-    args = parser.parse_args()
-
-    prepare(args.data_folder)
+    prepare()

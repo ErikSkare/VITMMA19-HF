@@ -1,7 +1,10 @@
 FROM python:3.10-slim
 
 # Installing dos2unix to handle line endings
-RUN apt update && apt install -y dos2unix && apt clean
+RUN apt update
+RUN apt install -y dos2unix
+RUN apt install -y wget
+RUN apt install -y unzip
 
 # Setting working directory
 WORKDIR /app

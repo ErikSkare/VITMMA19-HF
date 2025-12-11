@@ -7,9 +7,15 @@ BATCH_SIZE = 32
 LEARNING_RATE = 0.001
 
 # Paths
-DATA_DIR = "/app/data"
-MODEL_SAVE_PATH = "/app/model.pth"
+DATA_DIR = "./data"
+BASELINE_MODEL_SAVE_PATH = "./output/baseline_model.joblib"
+
 INDIVIDUAL_RAW_PATH = './output/individual_raw.csv'
 CONSENSUS_RAW_PATH = './output/consensus_raw.csv'
 TRAIN_DATA_PATH = './output/train_data.csv'
+BASELINE_TRAIN_DATA_PATH = './output/baseline_train_data.csv'
 TEST_DATA_PATH = './output/test_data.csv'
+BASELINE_TEST_DATA_PATH = './output/baseline_test_data.csv'
+
+# Urls
+DOWNLOAD_DATA_URL = "https://bmeedu-my.sharepoint.com/:u:/g/personal/gyires-toth_balint_vik_bme_hu/IQDYwXUJcB_jQYr0bDfNT5RKARYgfKoH97zho3rxZ46KA1I?e=iFp3iz&download=1&xsdata=MDV8MDJ8fDIyOTc1YmYyMWMzNzQyODFlZWZhMDhkZTM3YmNkMjdifDZhMzU0OGFiNzU3MDQyNzE5MWE4NThkYTAwNjk3MDI5fDB8MHw2MzkwMDk0ODEyNTgwNjE0Njd8VW5rbm93bnxWR1ZoYlhOVFpXTjFjbWwwZVZObGNuWnBZMlY4ZXlKRFFTSTZJbFJsWVcxelgwRlVVRk5sY25acFkyVmZVMUJQVEU5R0lpd2lWaUk2SWpBdU1DNHdNREF3SWl3aVVDSTZJbGRwYmpNeUlpd2lRVTRpT2lKUGRHaGxjaUlzSWxkVUlqb3hNWDA9fDF8TDNSbFlXMXpMekU1T2xSM1NIcHViVlpTVlVKUGFGUjFRVTFyWlc1blIyVlhTSEkzYjB0WVNWQkNTamxxTWtKbkxVdFdkMnN4UUhSb2NtVmhaQzUwWVdOMk1pOWphR0Z1Ym1Wc2N5OHhPVHBVZDBoNmJtMVdVbFZDVDJoVWRVRk5hMlZ1WjBkbFYwaHlOMjlMV0VsUVFrbzVhakpDWnkxTFZuZHJNVUIwYUhKbFlXUXVkR0ZqZGpJdmJXVnpjMkZuWlhNdk1UYzJOVE0xTVRNeU5ETTJPQT09fDBiYmVmZWIwYWJmOTRkZTFlZWZhMDhkZTM3YmNkMjdifGRlNDNhNjEyMWZmNzQxOTk4OGJiYzk4ZWMzZjU4MTdk&sdata=MEVHaDVlSkQrR09NUWRsbFV1SXBTMDNEMDV5OUlWV0hEbmlVcEI5YWNuTT0%3D&ovuser=6a3548ab-7570-4271-91a8-58da00697029%2Cskareerik%40edu.bme.hu"
