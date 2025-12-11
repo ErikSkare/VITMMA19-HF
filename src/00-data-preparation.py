@@ -6,19 +6,19 @@ import json
 import pandas as pd
 import subprocess
 from utils import setup_logger
-from config import DATA_DIR, INDIVIDUAL_RAW_PATH, CONSENSUS_RAW_PATH, DOWNLOAD_DATA_URL
+from config import DATA_URL, DATA_DIR, INDIVIDUAL_PATH, CONSENSUS_PATH
 
 logger = setup_logger()
 
 def download_data():
     logger.info("Downloading raw dataset...")
     output_path = os.path.join(DATA_DIR, 'raw.zip')
-    subprocess.run(["wget", "-q", DOWNLOAD_DATA_URL, "-O", output_path])
+    subprocess.run(["wget", "-q", DATA_URL, "-O", output_path])
 
 def unzip_data():
     logger.info("Unzipping raw dataset...")
     output_path = os.path.join(DATA_DIR, 'raw.zip')
-    subprocess.run(["unzip", "-q", output_path, "-d", DATA_DIR])
+    subprocess.run(["unzip", "-q", "-o", output_path, "-d", DATA_DIR])
 
 def safe_get(entry, path, dtype):
     try: 
@@ -49,6 +49,7 @@ def merge_paired(*dfs) -> pd.DataFrame:
     return df.groupby('text', as_index=False).sum().sort_values(by='text')
 
 def prepare():
+    logger.info("#####################")
     logger.info('Preparing dataset...')
 
     download_data()
@@ -67,13 +68,14 @@ def prepare():
 
     logger.info(f"Read in: {len(individual_df)} individual paragraphs, {len(consensus_df)} consensus paragraphs.")
 
-    individual_df.to_csv(INDIVIDUAL_RAW_PATH, index=False)
-    consensus_df.to_csv(CONSENSUS_RAW_PATH, index=False)
+    individual_df.to_csv(INDIVIDUAL_PATH, index=False)
+    consensus_df.to_csv(CONSENSUS_PATH, index=False)
 
-    logger.info(f'Created {INDIVIDUAL_RAW_PATH}.')
-    logger.info(f'Created {CONSENSUS_RAW_PATH}.')
+    logger.info(f'Created {INDIVIDUAL_PATH}.')
+    logger.info(f'Created {CONSENSUS_PATH}.')
 
     logger.info('Preparation is finished...')
+    logger.info("#####################")
 
 if __name__ == '__main__':
     prepare()
