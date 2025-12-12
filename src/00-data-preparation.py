@@ -10,16 +10,18 @@ from config import DATA_URL, DATA_DIR, INDIVIDUAL_PATH, CONSENSUS_PATH
 
 logger = setup_logger()
 
+# -- DOWNLOAD, UNZIP -- #
 def download_data():
-    logger.info("Downloading raw dataset...")
+    logger.info("> Downloading raw dataset")
     output_path = os.path.join(DATA_DIR, 'raw.zip')
     subprocess.run(["wget", "-q", DATA_URL, "-O", output_path])
 
 def unzip_data():
-    logger.info("Unzipping raw dataset...")
+    logger.info("> Unzipping raw dataset")
     output_path = os.path.join(DATA_DIR, 'raw.zip')
     subprocess.run(["unzip", "-q", "-o", output_path, "-d", DATA_DIR])
 
+# -- PREPARE -- #
 def safe_get(entry, path, dtype):
     try: 
         current = entry
@@ -48,9 +50,11 @@ def merge_paired(*dfs) -> pd.DataFrame:
     df = pd.get_dummies(df, columns=['rating'])
     return df.groupby('text', as_index=False).sum().sort_values(by='text')
 
+# -- PIPELINE -- #
 def prepare():
     logger.info("#####################")
     logger.info('Preparing dataset...')
+    logger.info("#####################")
 
     download_data()
     unzip_data()
@@ -71,11 +75,8 @@ def prepare():
     individual_df.to_csv(INDIVIDUAL_PATH, index=False)
     consensus_df.to_csv(CONSENSUS_PATH, index=False)
 
-    logger.info(f'Created {INDIVIDUAL_PATH}.')
-    logger.info(f'Created {CONSENSUS_PATH}.')
-
-    logger.info('Preparation is finished...')
-    logger.info("#####################")
+    logger.info(f'Created {INDIVIDUAL_PATH}')
+    logger.info(f'Created {CONSENSUS_PATH}')
 
 if __name__ == '__main__':
     prepare()
