@@ -1,6 +1,6 @@
 FROM python:3.10-slim
 
-# Installing dos2unix to handle line endings
+# Installing necessary packages
 RUN apt update
 RUN apt install -y dos2unix
 RUN apt install -y wget
@@ -19,8 +19,10 @@ COPY src/ src/
 COPY notebook/ notebook/
 COPY run.sh run.sh
 
-# Create a directory for data (to be mounted)
+# Create necessary directories
 RUN mkdir -p /app/data
+RUN mkdir -p /app/intermediate
+RUN mkdir -p /app/output
 
 # Fix line endings and make executable
 RUN dos2unix /app/run.sh

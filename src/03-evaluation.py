@@ -24,7 +24,7 @@ def evaluate_baseline(df: pd.DataFrame):
     X_test, y_test = compute_baseline_features(df["text"]), df["rating"]
     preds = model.predict(X_test)
 
-    logger.info("> Results")
+    logger.info(": Results")
     cm = confusion_matrix(y_test, preds)
     logger.info(f"MAE: {mean_absolute_error(y_test, preds)}")
     logger.info(f"Confusion matrix:\n {cm_to_df(cm)}")

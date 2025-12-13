@@ -8,8 +8,9 @@ import re
 import importlib
 import huspacy
 import torch
+import subprocess
 import numpy as np
-from config import EPOCHS, BATCH_SIZE, LEARNING_RATE, EARLY_STOPPING_PATIENCE
+from config import EPOCHS, BATCH_SIZE, LEARNING_RATE, EARLY_STOPPING_PATIENCE, HUSPACY_MODEL_URL
 from torch.nn.utils.rnn import pad_sequence
 
 # General
@@ -46,7 +47,12 @@ logger = setup_logger()
 model_name = "hu_core_news_md"
 if importlib.util.find_spec(model_name) is None:
     logger.info(f"Downloading huSpaCy model '{model_name}'...")
-    huspacy.download(model_name)
+    subprocess.run(
+        ["pip", "install", HUSPACY_MODEL_URL],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=True
+    )
 else:
     logger.info(f"Model '{model_name}' already installed.")
 
