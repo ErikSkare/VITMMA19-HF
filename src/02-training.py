@@ -1,52 +1,30 @@
 # Model training script
 # This script defines the model architecture and runs the training loop.
-import re
-import string
 import joblib
 import torch
-import huspacy
 import numpy as np
 import pandas as pd
 import torch.nn as nn
 import torchmetrics
-import importlib.util
-from utils import setup_logger, load_config
+import torch.nn.functional as F
+from utils import setup_logger, load_config, compute_baseline_features, tokenize_dataset, collate_fn, to_ordinal_levels, to_labels
 from config import TRAIN_PATH, BASELINE_MODEL_PATH, CACHED_DATA_PATH, FINAL_MODEL_PATH
+from models import build_cnn_model
+from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
-import torch.nn.functional as F
-from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.nn.utils.rnn import pad_sequence
 
 logger = setup_logger()
-
-model_name = "hu_core_news_md"
-if importlib.util.find_spec(model_name) is None:
-    print(f"Downloading huSpaCy model '{model_name}'...")
-    huspacy.download(model_name)
-else:
-    print(f"Model '{model_name}' already installed.")
-
-tokenizer = huspacy.load("hu_core_news_md", disable=["tagger","parser","ner"])
 
 seed = 42
 np.random.seed(seed)
 torch.manual_seed(seed)
 
 # -- BASELINE MODEL -- #
-def compute_baseline_features(texts: pd.Series):
-    features = pd.DataFrame()
-    features["char_count"] = texts.apply(lambda x: len(str(x)))
-    features["word_count"] = texts.apply(lambda x: len(str(x).split()))
-    features["sentence_count"] = texts.apply(lambda x: len(re.findall(r'[.!?]+', x)))
-    features["avg_word_length"] = texts.apply(lambda x: sum(len(word) for word in str(x).split()) / max(len(str(x).split()), 1))
-    features["punctuation_count"] = texts.apply(lambda x: sum(1 for c in str(x) if c in string.punctuation))
-    return features
-
 def train_baseline_model(df: pd.DataFrame):
     logger.info("> Training baseline model (logistic regression with L2)")
 
@@ -71,33 +49,6 @@ def train_baseline_model(df: pd.DataFrame):
     logger.info(f"Saved baseline model (refitted) to {BASELINE_MODEL_PATH}")
 
 # -- FINAL MODEL -- #
-def tokenize_paragraph(text: str):
-    doc = tokenizer(text)
-    embeddings = np.array([token.vector for token in doc])
-    embeddings /= (np.linalg.norm(embeddings, axis=-1, keepdims=True) + 1e-8)
-    return torch.tensor(embeddings)
-
-def tokenize_dataset(texts: pd.Series):
-    embeddings = []
-    for text in texts: embeddings.append(tokenize_paragraph(text))
-    return embeddings
-
-def collate_fn(batch):
-    embeddings, targets = zip(*batch)
-    embeddings = pad_sequence(embeddings, batch_first=True)
-    embeddings = embeddings.permute(0, 2, 1)
-    return embeddings, torch.tensor(targets, dtype=torch.long)
-
-def to_ordinal_levels(batch):
-    ordinal_targets = torch.zeros((batch.size(0), 4))
-    for k in range(4): ordinal_targets[:, k] = (batch > k).float()
-    return ordinal_targets
-
-def to_labels(logits):
-    probs = torch.sigmoid(logits)
-    binary = (probs > 0.5).int()
-    return binary.cumprod(dim=1).sum(dim=1)
-
 def train_final_model(df: pd.DataFrame, config: dict):
     logger.info("> Training final model (1D CNN)")
     logger.info(f"Using hyperparameters: {config}")
@@ -124,21 +75,7 @@ def train_final_model(df: pd.DataFrame, config: dict):
     logger.info("Created train and validation DataLoaders")
 
     # Define model
-    model = nn.Sequential(
-        nn.Conv1d(in_channels=100, out_channels=32, kernel_size=5), 
-        nn.BatchNorm1d(32), 
-        nn.ReLU(), 
-        nn.Conv1d(in_channels=32, out_channels=16, kernel_size=5), 
-        nn.BatchNorm1d(16), 
-        nn.ReLU(), 
-        nn.AdaptiveMaxPool1d(4), 
-        nn.Flatten(), 
-        nn.Linear(64, 32),
-        nn.ReLU(),
-        nn.Dropout(0.3),
-        nn.Linear(32, 4)
-    )
-
+    model = build_cnn_model(embedding_dim=100)
     logger.info(model)
 
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -174,7 +111,7 @@ def train_final_model(df: pd.DataFrame, config: dict):
             logits = model(batch_X)
             labels = to_labels(logits)
             
-            weight = torch.exp(torch.abs(labels - batch_y)).unsqueeze(1)
+            weight = (1 + torch.abs(labels - batch_y)).unsqueeze(1)
             levels = to_ordinal_levels(batch_y)
             loss = F.binary_cross_entropy_with_logits(logits, levels, weight=weight)
 
@@ -198,7 +135,7 @@ def train_final_model(df: pd.DataFrame, config: dict):
                 logits = model(batch_X)
                 labels = to_labels(logits)
                 
-                weight = torch.exp(torch.abs(labels - batch_y)).unsqueeze(1)
+                weight = (1 + torch.abs(labels - batch_y)).unsqueeze(1)
                 levels = to_ordinal_levels(batch_y)
                 loss = F.binary_cross_entropy_with_logits(logits, levels, weight=weight)
 

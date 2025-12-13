@@ -4,7 +4,7 @@ import os
 # Training hyperparameters
 EPOCHS = 1000
 BATCH_SIZE = 128
-LEARNING_RATE = 2e-4
+LEARNING_RATE = 1e-4
 EARLY_STOPPING_PATIENCE = 20
 
 # Paths

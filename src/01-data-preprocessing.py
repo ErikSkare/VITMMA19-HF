@@ -31,7 +31,7 @@ def compute_majority(df: pd.DataFrame):
     logger.info("Calculating majority ratings (choosing first on tie)")
     logger.info(f"Number of rows with tie in majority votes: {tie_count}")
     df["rating"] = ratings.values.argmax(axis=1) + 1
-    return df.drop(columns=ratings.columns)
+    return df
 
 # -- PIPELINE -- #
 def preprocess():
