@@ -1,0 +1,219 @@
+[run.sh] Starting full pipeline run at 2025-12-13T21:16:47+00:00
+2025-12-13 21:16:48,707 - INFO - Downloading huSpaCy model 'hu_core_news_md'...
+2025-12-13 21:17:04,383 - INFO - #####################
+2025-12-13 21:17:04,383 - INFO - Preparing dataset...
+2025-12-13 21:17:04,383 - INFO - #####################
+2025-12-13 21:17:04,383 - INFO - > Downloading raw dataset
+2025-12-13 21:17:05,848 - INFO - > Unzipping raw dataset
+2025-12-13 21:17:05,924 - INFO - Found: 34 individual files, 30 consensus files.
+2025-12-13 21:17:06,058 - INFO - Read in: 3901 individual paragraphs, 609 consensus paragraphs.
+2025-12-13 21:17:06,093 - INFO - Created /app/intermediate/individual_raw.csv
+2025-12-13 21:17:06,093 - INFO - Created /app/intermediate/consensus_raw.csv
+2025-12-13 21:17:07,837 - INFO - Model 'hu_core_news_md' already installed.
+2025-12-13 21:17:09,859 - INFO - #####################
+2025-12-13 21:17:09,859 - INFO - Preprocessing data...
+2025-12-13 21:17:09,859 - INFO - #####################
+2025-12-13 21:17:09,859 - INFO - Load in: /app/intermediate/consensus_raw.csv
+2025-12-13 21:17:09,866 - INFO - Load in: /app/intermediate/individual_raw.csv
+2025-12-13 21:17:09,890 - INFO - > Cleaning consensus dataset
+2025-12-13 21:17:09,895 - INFO - Deleted 468 individual rows
+2025-12-13 21:17:09,896 - INFO - Calculating majority ratings (choosing first on tie)
+2025-12-13 21:17:09,896 - INFO - Number of rows with tie in majority votes: 12
+2025-12-13 21:17:09,897 - INFO - > Cleaning individual dataset
+2025-12-13 21:17:09,899 - INFO - Deleted 154 NA rows
+2025-12-13 21:17:09,903 - INFO - Deleted 345 duplicated rows (keep first)
+2025-12-13 21:17:09,904 - INFO - Deleted 132 leaking rows
+2025-12-13 21:17:09,905 - INFO - > Saving results
+2025-12-13 21:17:09,938 - INFO - Created /app/intermediate/train_data.csv
+2025-12-13 21:17:09,938 - INFO - Created /app/intermediate/test_data.csv
+2025-12-13 21:17:13,052 - INFO - Model 'hu_core_news_md' already installed.
+2025-12-13 21:17:15,835 - INFO - #####################
+2025-12-13 21:17:15,835 - INFO - Starting training process...
+2025-12-13 21:17:15,835 - INFO - #####################
+2025-12-13 21:17:15,864 - INFO - > Read in: /app/intermediate/train_data.csv
+2025-12-13 21:17:15,864 - INFO - > Training baseline model (logistic regression with L2)
+2025-12-13 21:17:15,864 - INFO - Extracting hand-crafted features
+2025-12-13 21:17:16,040 - INFO - Running hyperparameter optimization
+2025-12-13 21:17:16,040 - INFO - Searching over: inverse regularization parameter
+2025-12-13 21:17:24,415 - INFO - Best params: {'model__C': 8.858667904100823}
+2025-12-13 21:17:24,415 - INFO - Best CV score (10 folds): 0.799388379204893 (MAE estimate)
+2025-12-13 21:17:24,418 - INFO - Saved baseline model (refitted) to /app/output/baseline_model.joblib
+2025-12-13 21:17:24,418 - INFO - > Training final model (1D CNN)
+2025-12-13 21:17:24,418 - INFO - Using hyperparameters: {'epochs': 1000, 'batch_size': 128, 'lr': 0.0001, 'patience': 20}
+2025-12-13 21:17:24,418 - INFO - Tokenizing dataset
+2025-12-13 21:18:30,449 - INFO - Caching tokenized dataset
+2025-12-13 21:18:30,672 - INFO - Created train-validation split (train: 2779, validation: 491)
+2025-12-13 21:18:30,675 - INFO - Created train and validation DataLoaders
+2025-12-13 21:18:30,677 - INFO - Sequential(
+  (0): Conv1d(100, 32, kernel_size=(5,), stride=(1,))
+  (1): BatchNorm1d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (2): ReLU()
+  (3): Conv1d(32, 16, kernel_size=(5,), stride=(1,))
+  (4): BatchNorm1d(16, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (5): ReLU()
+  (6): AdaptiveMaxPool1d(output_size=4)
+  (7): Flatten(start_dim=1, end_dim=-1)
+  (8): Linear(in_features=64, out_features=32, bias=True)
+  (9): ReLU()
+  (10): Dropout(p=0.3, inplace=False)
+  (11): Linear(in_features=32, out_features=4, bias=True)
+)
+2025-12-13 21:18:30,678 - INFO - Trainable params: 20916, non-trainable params: 0
+2025-12-13 21:18:37,096 - INFO - Epoch 1: Train Loss=2.2525, Train MAE=2.2702 | Val Loss=2.6253, Val MAE=2.7454 |Learning rate=1.0e-04
+2025-12-13 21:18:37,098 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:18:38,727 - INFO - Epoch 2: Train Loss=1.5922, Train MAE=1.4167 | Val Loss=1.5460, Val MAE=1.2587 |Learning rate=1.0e-04
+2025-12-13 21:18:38,729 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:18:40,337 - INFO - Epoch 3: Train Loss=1.3596, Train MAE=1.1238 | Val Loss=1.2423, Val MAE=0.9165 |Learning rate=1.0e-04
+2025-12-13 21:18:40,339 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:18:41,964 - INFO - Epoch 4: Train Loss=1.2803, Train MAE=1.0331 | Val Loss=1.1834, Val MAE=0.9022 |Learning rate=1.0e-04
+2025-12-13 21:18:41,966 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:18:43,496 - INFO - Epoch 5: Train Loss=1.2295, Train MAE=0.9928 | Val Loss=1.1615, Val MAE=0.9063 |Learning rate=1.0e-04
+2025-12-13 21:18:45,510 - INFO - Epoch 6: Train Loss=1.2136, Train MAE=0.9716 | Val Loss=1.1506, Val MAE=0.9104 |Learning rate=1.0e-04
+2025-12-13 21:18:47,080 - INFO - Epoch 7: Train Loss=1.1666, Train MAE=0.9359 | Val Loss=1.1314, Val MAE=0.9063 |Learning rate=1.0e-04
+2025-12-13 21:18:48,728 - INFO - Epoch 8: Train Loss=1.1516, Train MAE=0.9367 | Val Loss=1.1051, Val MAE=0.9002 |Learning rate=1.0e-04
+2025-12-13 21:18:48,730 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:18:50,281 - INFO - Epoch 9: Train Loss=1.1225, Train MAE=0.9385 | Val Loss=1.0745, Val MAE=0.8941 |Learning rate=1.0e-04
+2025-12-13 21:18:50,283 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:18:51,806 - INFO - Epoch 10: Train Loss=1.1121, Train MAE=0.9306 | Val Loss=1.0492, Val MAE=0.8737 |Learning rate=1.0e-04
+2025-12-13 21:18:51,808 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:18:53,420 - INFO - Epoch 11: Train Loss=1.0885, Train MAE=0.9241 | Val Loss=1.0244, Val MAE=0.8554 |Learning rate=1.0e-04
+2025-12-13 21:18:53,423 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:18:55,509 - INFO - Epoch 12: Train Loss=1.0696, Train MAE=0.8935 | Val Loss=1.0154, Val MAE=0.8493 |Learning rate=1.0e-04
+2025-12-13 21:18:55,511 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:18:57,204 - INFO - Epoch 13: Train Loss=1.0692, Train MAE=0.9018 | Val Loss=1.0079, Val MAE=0.8432 |Learning rate=1.0e-04
+2025-12-13 21:18:57,209 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:18:58,798 - INFO - Epoch 14: Train Loss=1.0521, Train MAE=0.8899 | Val Loss=1.0009, Val MAE=0.8391 |Learning rate=1.0e-04
+2025-12-13 21:18:58,803 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:00,459 - INFO - Epoch 15: Train Loss=1.0323, Train MAE=0.8798 | Val Loss=0.9938, Val MAE=0.8371 |Learning rate=1.0e-04
+2025-12-13 21:19:00,461 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:02,238 - INFO - Epoch 16: Train Loss=1.0234, Train MAE=0.8723 | Val Loss=0.9816, Val MAE=0.8310 |Learning rate=1.0e-04
+2025-12-13 21:19:02,241 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:04,311 - INFO - Epoch 17: Train Loss=1.0134, Train MAE=0.8615 | Val Loss=0.9676, Val MAE=0.8167 |Learning rate=1.0e-04
+2025-12-13 21:19:04,313 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:06,028 - INFO - Epoch 18: Train Loss=1.0046, Train MAE=0.8687 | Val Loss=0.9484, Val MAE=0.7902 |Learning rate=1.0e-04
+2025-12-13 21:19:06,031 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:06,461 - INFO - Epoch 19: Train Loss=0.9916, Train MAE=0.8521 | Val Loss=0.9415, Val MAE=0.7882 |Learning rate=1.0e-04
+2025-12-13 21:19:06,463 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:08,192 - INFO - Epoch 20: Train Loss=0.9753, Train MAE=0.8370 | Val Loss=0.9344, Val MAE=0.7841 |Learning rate=1.0e-04
+2025-12-13 21:19:08,196 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:09,735 - INFO - Epoch 21: Train Loss=0.9555, Train MAE=0.8251 | Val Loss=0.9349, Val MAE=0.7800 |Learning rate=1.0e-04
+2025-12-13 21:19:09,737 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:11,872 - INFO - Epoch 22: Train Loss=0.9412, Train MAE=0.8132 | Val Loss=0.9219, Val MAE=0.7719 |Learning rate=1.0e-04
+2025-12-13 21:19:11,874 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:13,634 - INFO - Epoch 23: Train Loss=0.9345, Train MAE=0.8021 | Val Loss=0.9203, Val MAE=0.7699 |Learning rate=1.0e-04
+2025-12-13 21:19:13,639 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:15,246 - INFO - Epoch 24: Train Loss=0.9257, Train MAE=0.7722 | Val Loss=0.9115, Val MAE=0.7576 |Learning rate=1.0e-04
+2025-12-13 21:19:15,249 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:16,932 - INFO - Epoch 25: Train Loss=0.8947, Train MAE=0.7607 | Val Loss=0.9091, Val MAE=0.7515 |Learning rate=1.0e-04
+2025-12-13 21:19:16,934 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:18,670 - INFO - Epoch 26: Train Loss=0.8863, Train MAE=0.7578 | Val Loss=0.9037, Val MAE=0.7515 |Learning rate=1.0e-04
+2025-12-13 21:19:20,822 - INFO - Epoch 27: Train Loss=0.8601, Train MAE=0.7409 | Val Loss=0.8969, Val MAE=0.7495 |Learning rate=1.0e-04
+2025-12-13 21:19:20,824 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:22,336 - INFO - Epoch 28: Train Loss=0.8542, Train MAE=0.7262 | Val Loss=0.8911, Val MAE=0.7373 |Learning rate=1.0e-04
+2025-12-13 21:19:22,338 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:24,125 - INFO - Epoch 29: Train Loss=0.8187, Train MAE=0.7060 | Val Loss=0.8760, Val MAE=0.7312 |Learning rate=1.0e-04
+2025-12-13 21:19:24,127 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:25,826 - INFO - Epoch 30: Train Loss=0.8130, Train MAE=0.7154 | Val Loss=0.8763, Val MAE=0.7373 |Learning rate=1.0e-04
+2025-12-13 21:19:27,499 - INFO - Epoch 31: Train Loss=0.8155, Train MAE=0.7013 | Val Loss=0.8673, Val MAE=0.7169 |Learning rate=1.0e-04
+2025-12-13 21:19:27,501 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:29,057 - INFO - Epoch 32: Train Loss=0.7974, Train MAE=0.6830 | Val Loss=0.8709, Val MAE=0.7271 |Learning rate=1.0e-04
+2025-12-13 21:19:31,265 - INFO - Epoch 33: Train Loss=0.7740, Train MAE=0.6650 | Val Loss=0.8654, Val MAE=0.7271 |Learning rate=1.0e-04
+2025-12-13 21:19:32,986 - INFO - Epoch 34: Train Loss=0.7548, Train MAE=0.6556 | Val Loss=0.8632, Val MAE=0.7271 |Learning rate=1.0e-04
+2025-12-13 21:19:34,631 - INFO - Epoch 35: Train Loss=0.7330, Train MAE=0.6430 | Val Loss=0.8645, Val MAE=0.7312 |Learning rate=1.0e-04
+2025-12-13 21:19:38,988 - INFO - Epoch 36: Train Loss=0.7392, Train MAE=0.6474 | Val Loss=0.8569, Val MAE=0.7210 |Learning rate=1.0e-04
+2025-12-13 21:19:40,961 - INFO - Epoch 37: Train Loss=0.7149, Train MAE=0.6204 | Val Loss=0.8563, Val MAE=0.7271 |Learning rate=1.0e-04
+2025-12-13 21:19:43,638 - INFO - Epoch 38: Train Loss=0.7017, Train MAE=0.6218 | Val Loss=0.8604, Val MAE=0.7312 |Learning rate=1.0e-04
+2025-12-13 21:19:45,624 - INFO - Epoch 39: Train Loss=0.6960, Train MAE=0.6153 | Val Loss=0.8560, Val MAE=0.7230 |Learning rate=1.0e-04
+2025-12-13 21:19:47,676 - INFO - Epoch 40: Train Loss=0.6930, Train MAE=0.6164 | Val Loss=0.8523, Val MAE=0.7149 |Learning rate=1.0e-04
+2025-12-13 21:19:47,679 - INFO - Saved best model to /app/output/final_model.pth
+2025-12-13 21:19:49,558 - INFO - Epoch 41: Train Loss=0.6679, Train MAE=0.5822 | Val Loss=0.8519, Val MAE=0.7169 |Learning rate=1.0e-04
+2025-12-13 21:19:51,655 - INFO - Epoch 42: Train Loss=0.6640, Train MAE=0.5883 | Val Loss=0.8619, Val MAE=0.7373 |Learning rate=1.0e-04
+2025-12-13 21:19:54,211 - INFO - Epoch 43: Train Loss=0.6466, Train MAE=0.5685 | Val Loss=0.8480, Val MAE=0.7149 |Learning rate=1.0e-04
+2025-12-13 21:19:56,129 - INFO - Epoch 44: Train Loss=0.6337, Train MAE=0.5635 | Val Loss=0.8498, Val MAE=0.7189 |Learning rate=1.0e-04
+2025-12-13 21:19:57,894 - INFO - Epoch 45: Train Loss=0.6155, Train MAE=0.5387 | Val Loss=0.8627, Val MAE=0.7373 |Learning rate=1.0e-04
+2025-12-13 21:19:59,540 - INFO - Epoch 46: Train Loss=0.6302, Train MAE=0.5592 | Val Loss=0.8563, Val MAE=0.7291 |Learning rate=1.0e-04
+2025-12-13 21:20:01,245 - INFO - Epoch 47: Train Loss=0.5969, Train MAE=0.5336 | Val Loss=0.8590, Val MAE=0.7291 |Learning rate=1.0e-04
+2025-12-13 21:20:03,453 - INFO - Epoch 48: Train Loss=0.5946, Train MAE=0.5333 | Val Loss=0.8672, Val MAE=0.7434 |Learning rate=1.0e-04
+2025-12-13 21:20:05,229 - INFO - Epoch 49: Train Loss=0.5814, Train MAE=0.5189 | Val Loss=0.8649, Val MAE=0.7373 |Learning rate=1.0e-04
+2025-12-13 21:20:06,733 - INFO - Epoch 50: Train Loss=0.5764, Train MAE=0.5164 | Val Loss=0.8639, Val MAE=0.7393 |Learning rate=1.0e-04
+2025-12-13 21:20:08,370 - INFO - Epoch 51: Train Loss=0.5574, Train MAE=0.5077 | Val Loss=0.8690, Val MAE=0.7373 |Learning rate=1.0e-04
+2025-12-13 21:20:10,010 - INFO - Epoch 52: Train Loss=0.5453, Train MAE=0.4912 | Val Loss=0.8793, Val MAE=0.7536 |Learning rate=1.0e-04
+2025-12-13 21:20:12,331 - INFO - Epoch 53: Train Loss=0.5384, Train MAE=0.4797 | Val Loss=0.8703, Val MAE=0.7454 |Learning rate=1.0e-04
+2025-12-13 21:20:14,161 - INFO - Epoch 54: Train Loss=0.5332, Train MAE=0.4746 | Val Loss=0.8779, Val MAE=0.7536 |Learning rate=1.0e-05
+2025-12-13 21:20:15,744 - INFO - Epoch 55: Train Loss=0.5106, Train MAE=0.4552 | Val Loss=0.8799, Val MAE=0.7556 |Learning rate=1.0e-05
+2025-12-13 21:20:17,501 - INFO - Epoch 56: Train Loss=0.5278, Train MAE=0.4718 | Val Loss=0.8778, Val MAE=0.7556 |Learning rate=1.0e-05
+2025-12-13 21:20:19,373 - INFO - Epoch 57: Train Loss=0.5106, Train MAE=0.4682 | Val Loss=0.8778, Val MAE=0.7536 |Learning rate=1.0e-05
+2025-12-13 21:20:21,637 - INFO - Epoch 58: Train Loss=0.5278, Train MAE=0.4833 | Val Loss=0.8780, Val MAE=0.7576 |Learning rate=1.0e-05
+2025-12-13 21:20:23,461 - INFO - Epoch 59: Train Loss=0.4949, Train MAE=0.4365 | Val Loss=0.8784, Val MAE=0.7556 |Learning rate=1.0e-05
+2025-12-13 21:20:25,332 - INFO - Epoch 60: Train Loss=0.5073, Train MAE=0.4437 | Val Loss=0.8730, Val MAE=0.7495 |Learning rate=1.0e-05
+2025-12-13 21:20:25,332 - INFO - Early stopping
+2025-12-13 21:20:27,959 - INFO - Model 'hu_core_news_md' already installed.
+2025-12-13 21:20:30,337 - INFO - #####################
+2025-12-13 21:20:30,337 - INFO - Evaluating model...
+2025-12-13 21:20:30,337 - INFO - #####################
+2025-12-13 21:20:30,340 - INFO - : Read in: /app/intermediate/test_data.csv
+2025-12-13 21:20:30,340 - INFO - > Evaluating baseline model
+2025-12-13 21:20:30,340 - INFO - Loading best baseline model
+2025-12-13 21:20:30,390 - INFO - Calculating prediction labels
+2025-12-13 21:20:30,403 - INFO - : Results
+2025-12-13 21:20:30,409 - INFO - MAE: 0.6808510638297872
+2025-12-13 21:20:30,417 - INFO - Confusion matrix:
+         pred_1  pred_2  pred_3  pred_4  pred_5
+true_1       0       0       2       2       0
+true_2       0       0       2      13       2
+true_3       0       0       2      20       3
+true_4       0       0       0      24      24
+true_5       0       0       0       2      45
+2025-12-13 21:20:30,417 - INFO - > Evaluating final model
+2025-12-13 21:20:30,417 - INFO - Loading best final model
+2025-12-13 21:20:30,424 - INFO - Tokenize test dataset
+2025-12-13 21:20:33,428 - INFO - : Results
+2025-12-13 21:20:33,445 - INFO - MAE: 0.5957446808510638
+2025-12-13 21:20:33,451 - INFO - Confusion matrix:
+         pred_1  pred_2  pred_3  pred_4  pred_5
+true_1       0       1       3       0       0
+true_2       0       8       7       2       0
+true_3       0       2      20       3       0
+true_4       0       2      19      22       5
+true_5       0       0       3      27      17
+2025-12-13 21:20:36,070 - INFO - Model 'hu_core_news_md' already installed.
+2025-12-13 21:20:38,255 - INFO - #####################
+2025-12-13 21:20:38,255 - INFO - Running inference...
+2025-12-13 21:20:38,255 - INFO - #####################
+2025-12-13 21:20:38,255 - INFO - > Predicting with baseline model
+2025-12-13 21:20:38,305 - INFO - -----------------------------
+2025-12-13 21:20:38,305 - INFO - Paragraph: 
+A Felek az Egyedi Szerződésben határozzák meg képzés jelen ÁSZF-hez képest egyedi
+feltételeit, így különösen a Képzési Szerződéssel érintett képzést, a képzés munkarendjét, a
+képzésért felelős kart, a képzés helyét, a költségtérítés első tanévre megállapított mértékét,
+
+2025-12-13 21:20:38,305 - INFO - Prediction: 5
+2025-12-13 21:20:38,305 - INFO - -----------------------------
+2025-12-13 21:20:38,305 - INFO - -----------------------------
+2025-12-13 21:20:38,305 - INFO - Paragraph: 
+Az egy tanévre meghatározott költségtérítés két részletben esedékes. A fix díj 50%-a
+tanulmányi félévenként, míg a felvett kreditek után fizetendő díj szintén tanulmányi félévente, a
+regisztrációs időszakban ténylegesen felvett kreditek alapján fizetendő, az Egyetem által
+kibocsátott számla alapján.
+
+2025-12-13 21:20:38,305 - INFO - Prediction: 5
+2025-12-13 21:20:38,306 - INFO - -----------------------------
+2025-12-13 21:20:38,306 - INFO - > Predicting with final model
+2025-12-13 21:20:38,350 - INFO - -----------------------------
+2025-12-13 21:20:38,350 - INFO - Paragraph: 
+A Felek az Egyedi Szerződésben határozzák meg képzés jelen ÁSZF-hez képest egyedi
+feltételeit, így különösen a Képzési Szerződéssel érintett képzést, a képzés munkarendjét, a
+képzésért felelős kart, a képzés helyét, a költségtérítés első tanévre megállapított mértékét,
+
+2025-12-13 21:20:38,350 - INFO - Prediction: 3
+2025-12-13 21:20:38,350 - INFO - -----------------------------
+2025-12-13 21:20:38,350 - INFO - -----------------------------
+2025-12-13 21:20:38,350 - INFO - Paragraph: 
+Az egy tanévre meghatározott költségtérítés két részletben esedékes. A fix díj 50%-a
+tanulmányi félévenként, míg a felvett kreditek után fizetendő díj szintén tanulmányi félévente, a
+regisztrációs időszakban ténylegesen felvett kreditek alapján fizetendő, az Egyetem által
+kibocsátott számla alapján.
+
+2025-12-13 21:20:38,350 - INFO - Prediction: 2
+2025-12-13 21:20:38,350 - INFO - -----------------------------
+[run.sh] Pipeline finished at 2025-12-13T21:20:38+00:00
