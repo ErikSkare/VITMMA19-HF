@@ -9,18 +9,33 @@ import numpy as np
 import pandas as pd
 import torch.nn as nn
 import torchmetrics
-from utils import setup_logger
-from config import TRAIN_PATH, BASELINE_MODEL_PATH, CACHED_DATA_PATH
+import importlib.util
+from utils import setup_logger, load_config
+from config import TRAIN_PATH, BASELINE_MODEL_PATH, CACHED_DATA_PATH, FINAL_MODEL_PATH
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
-from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.nn.utils.rnn import pad_sequence
 
 logger = setup_logger()
+
+model_name = "hu_core_news_md"
+if importlib.util.find_spec(model_name) is None:
+    print(f"Downloading huSpaCy model '{model_name}'...")
+    huspacy.download(model_name)
+else:
+    print(f"Model '{model_name}' already installed.")
+
 tokenizer = huspacy.load("hu_core_news_md", disable=["tagger","parser","ner"])
+
+seed = 42
+np.random.seed(seed)
+torch.manual_seed(seed)
 
 # -- BASELINE MODEL -- #
 def compute_baseline_features(texts: pd.Series):
@@ -46,11 +61,11 @@ def train_baseline_model(df: pd.DataFrame):
 
     logger.info("Running hyperparameter optimization")
     logger.info("Searching over: inverse regularization parameter")
-    grid = GridSearchCV(model_pipeline, param_grid, cv=10, scoring='balanced_accuracy')
+    grid = GridSearchCV(model_pipeline, param_grid, cv=10, scoring='neg_mean_absolute_error')
     grid.fit(X, y)
 
     logger.info(f"Best params: {grid.best_params_}")
-    logger.info(f"Best CV score (10 folds): {grid.best_score_} (balanced accuracy estimate)")
+    logger.info(f"Best CV score (10 folds): {-grid.best_score_} (MAE estimate)")
 
     joblib.dump(grid.best_estimator_, BASELINE_MODEL_PATH)
     logger.info(f"Saved baseline model (refitted) to {BASELINE_MODEL_PATH}")
@@ -59,154 +74,162 @@ def train_baseline_model(df: pd.DataFrame):
 def tokenize_paragraph(text: str):
     doc = tokenizer(text)
     embeddings = np.array([token.vector for token in doc])
+    embeddings /= (np.linalg.norm(embeddings, axis=-1, keepdims=True) + 1e-8)
     return torch.tensor(embeddings)
 
 def tokenize_dataset(texts: pd.Series):
-    embeddings, lengths = [], []
-    for text in texts: 
-        current = tokenize_paragraph(text)
-        embeddings.append(current)
-        lengths.append(len(current))
-    
-    lengths = torch.tensor(lengths)
+    embeddings = []
+    for text in texts: embeddings.append(tokenize_paragraph(text))
+    return embeddings
+
+def collate_fn(batch):
+    embeddings, targets = zip(*batch)
     embeddings = pad_sequence(embeddings, batch_first=True)
+    embeddings = embeddings.permute(0, 2, 1)
+    return embeddings, torch.tensor(targets, dtype=torch.long)
 
-    mask = (torch.arange(lengths.max()) < lengths.unsqueeze(1)).int()
-    mask = mask.unsqueeze(-1).expand(-1, -1, embeddings.size(-1))
-    
-    combined = torch.stack([embeddings, mask], dim=1)
-    return combined
+def to_ordinal_levels(batch):
+    ordinal_targets = torch.zeros((batch.size(0), 4))
+    for k in range(4): ordinal_targets[:, k] = (batch > k).float()
+    return ordinal_targets
 
-class FinalModel(nn.Module):
-    def __init__(self, embedding_dim: int, num_classes: int = 5):
-        super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv1d(in_channels=embedding_dim, out_channels=16, kernel_size=3),
-            nn.BatchNorm1d(16),
-            nn.ReLU(),
-        )
-        self.hidden = nn.Sequential(
-            nn.AdaptiveMaxPool1d(1),
-            nn.Flatten(),
-        )
-        self.linear = nn.Sequential(
-            nn.Linear(16, 8),
-            nn.Linear(8, num_classes)
-        )
-    
-    def forward(self, x):
-        # Extracting mask and embeddings
-        mask = x[:, 1]
-        x = x[:, 0]
-        # Convolution
-        x = x.transpose(1, 2)
-        x = self.conv(x)
-        # Masking
-        mask = mask.transpose(1, 2)
-        x = x.masked_fill(mask == 0, -1e9)
-        # Pooling
-        x = self.hidden(x)
-        # Classification
-        logits = self.linear(x)
-        return logits
+def to_labels(logits):
+    probs = torch.sigmoid(logits)
+    binary = (probs > 0.5).int()
+    return binary.cumprod(dim=1).sum(dim=1)
 
-def train_final_model(df: pd.DataFrame):
+def train_final_model(df: pd.DataFrame, config: dict):
     logger.info("> Training final model (1D CNN)")
+    logger.info(f"Using hyperparameters: {config}")
 
     # Caching
     try:
         data = torch.load(CACHED_DATA_PATH)
-        X_train, X_val = data["X_train"], data["X_val"]
-        y_train, y_val = data["y_train"], data["y_val"]
+        embeddings, targets = data["embeddings"], torch.tensor(data["targets"], dtype=torch.long)
         logger.info("Loaded in tokenized data from cache")
     except: 
-        # Train-val split
-        train_df, val_df = train_test_split(df, test_size=0.05, stratify=df["rating"], random_state=42)
-        logger.info(f"Splitting dataset (train: {len(train_df)}, val: {len(val_df)})")
+        logger.info("Tokenizing dataset")
+        embeddings, targets = tokenize_dataset(df["text"]), torch.tensor(df["rating"].values - 1, dtype=torch.long)
 
-        # Embeddings
-        logger.info("Tokenizing splitted datasets")
-        X_train, y_train = tokenize_dataset(train_df["text"]), torch.tensor(train_df["rating"].values, dtype=torch.long)
-        X_val, y_val = tokenize_dataset(val_df["text"]), torch.tensor(val_df["rating"].values, dtype=torch.long)
+        logger.info("Caching tokenized dataset")
+        torch.save({'embeddings': embeddings, 'targets': targets}, CACHED_DATA_PATH)
 
-        # Caching
-        torch.save({'X_train': X_train, 'y_train': y_train, 'X_val': X_val, 'y_val': y_val}, CACHED_DATA_PATH)
-        logger.info("Caching tokenized datasets")
-
-    # Normalize
-    logger.info("Normalizing embedding vectors")
-    X_train = X_train / (np.linalg.norm(X_train, axis=-1, keepdims=True) + 1e-8)
-    X_val = X_val / (np.linalg.norm(X_val, axis=-1, keepdims=True) + 1e-8)
-
-    # Permute to (batch, channels, sequence_length)
-    X_train, X_val = X_train.permute(0, 2, 1), X_val.permute(0, 2, 1)
+    # Train-val split
+    X_train, X_val, y_train, y_val = train_test_split(embeddings, targets, test_size=0.15, stratify=targets, random_state=42)
+    logger.info(f"Created train-validation split (train: {len(X_train)}, validation: {len(X_val)})")
 
     # Create loaders
-    train_dataset, val_dataset = TensorDataset(X_train, y_train), TensorDataset(X_val, y_val)
-    train_loader, val_loader = DataLoader(train_dataset, batch_size=256, shuffle=True), DataLoader(val_dataset, batch_size=256)
+    train_loader = DataLoader(list(zip(X_train, y_train)), batch_size=config["batch_size"], shuffle=True, collate_fn=collate_fn)
+    val_loader = DataLoader(list(zip(X_val, y_val)), batch_size=config["batch_size"], collate_fn=collate_fn)
+    logger.info("Created train and validation DataLoaders")
 
     # Define model
-    model = FinalModel(embedding_dim=100)
+    model = nn.Sequential(
+        nn.Conv1d(in_channels=100, out_channels=32, kernel_size=5), 
+        nn.BatchNorm1d(32), 
+        nn.ReLU(), 
+        nn.Conv1d(in_channels=32, out_channels=16, kernel_size=5), 
+        nn.BatchNorm1d(16), 
+        nn.ReLU(), 
+        nn.AdaptiveMaxPool1d(4), 
+        nn.Flatten(), 
+        nn.Linear(64, 32),
+        nn.ReLU(),
+        nn.Dropout(0.3),
+        nn.Linear(32, 4)
+    )
+
+    logger.info(model)
+
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    non_trainable_params = sum(p.numel() for p in model.parameters() if not p.requires_grad)
+
+    logger.info(f"Trainable params: {trainable_params}, non-trainable params: {non_trainable_params}")
 
     # Optimizer and loss
-    class_counts = torch.bincount(y_train)
-    weight = 1.0 / class_counts.float()
-    weight /= weight.sum()
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
-    criterion = nn.CrossEntropyLoss(weight=weight)
+    optimizer = torch.optim.Adam(model.parameters(), lr=config["lr"])
+    scheduler = ReduceLROnPlateau(optimizer)
 
     # Metrics
     train_loss_metric = torchmetrics.MeanMetric()
-    train_acc_metric = torchmetrics.Accuracy(task="multiclass", num_classes=5, average="macro")
+    train_mae_metric = torchmetrics.MeanAbsoluteError()
 
     val_loss_metric = torchmetrics.MeanMetric()
-    val_acc_metric = torchmetrics.Accuracy(task="multiclass", num_classes=5, average="macro")
+    val_mae_metric = torchmetrics.MeanAbsoluteError()
+
+    best_val_mae = float('inf')
+    patience, counter = config["patience"], 0
+    torch.save(model.state_dict(), FINAL_MODEL_PATH)
 
     # Training loop
-    for epoch in range(1, 1001):
+    for epoch in range(1, config["epochs"] + 1):
         # training
         model.train()
         
         train_loss_metric.reset()
-        train_acc_metric.reset()
+        train_mae_metric.reset()
 
         for batch_X, batch_y in train_loader:
             optimizer.zero_grad()
             logits = model(batch_X)
+            labels = to_labels(logits)
             
-            loss = criterion(logits, batch_y)
+            weight = torch.exp(torch.abs(labels - batch_y)).unsqueeze(1)
+            levels = to_ordinal_levels(batch_y)
+            loss = F.binary_cross_entropy_with_logits(logits, levels, weight=weight)
+
             loss.backward()
             optimizer.step()
 
             train_loss_metric.update(loss)
-            train_acc_metric.update(logits, batch_y)
+            train_mae_metric.update(labels, batch_y)
 
         train_loss = train_loss_metric.compute().item()
-        train_acc = train_acc_metric.compute().item()
+        train_mae = train_mae_metric.compute().item()
 
         # validation
         model.eval()
         
         val_loss_metric.reset()
-        val_acc_metric.reset()
+        val_mae_metric.reset()
 
         with torch.no_grad():
             for batch_X, batch_y in val_loader:
                 logits = model(batch_X)
-                loss = criterion(logits, batch_y)
+                labels = to_labels(logits)
+                
+                weight = torch.exp(torch.abs(labels - batch_y)).unsqueeze(1)
+                levels = to_ordinal_levels(batch_y)
+                loss = F.binary_cross_entropy_with_logits(logits, levels, weight=weight)
 
                 val_loss_metric.update(loss)
-                val_acc_metric.update(logits, batch_y)
+                val_mae_metric.update(labels, batch_y)
 
         val_loss = val_loss_metric.compute().item()
-        val_acc = val_acc_metric.compute().item()
+        val_mae = val_mae_metric.compute().item()
 
-        print(
+        # scheduler stepping
+        scheduler.step(val_loss)
+
+        # logging
+        logger.info(
             f"Epoch {epoch}: "
-            f"Train Loss={train_loss:.4f}, Train Acc={train_acc:.4f} | "
-            f"Val Loss={val_loss:.4f}, Val Acc={val_acc:.4f}"
+            f"Train Loss={train_loss:.4f}, Train MAE={train_mae:.4f} | "
+            f"Val Loss={val_loss:.4f}, Val MAE={val_mae:.4f} |"
+            f"Learning rate={scheduler.get_last_lr()[0]:.1e}"
         )
+
+        # early stopping
+        if val_mae < best_val_mae:
+            best_val_mae = val_mae
+            counter = 0
+            torch.save(model.state_dict(), FINAL_MODEL_PATH)
+            logger.info(f"Saved best model to {FINAL_MODEL_PATH}")
+        else:
+            counter += 1
+            if counter >= patience:
+                logger.info(f"Early stopping")
+                return
 
 # -- PIPELINE -- #
 def train():
@@ -217,8 +240,8 @@ def train():
     train_df = pd.read_csv(TRAIN_PATH)
     logger.info(f"> Read in: {TRAIN_PATH}")
 
-    train_final_model(train_df)
-
+    train_baseline_model(train_df)
+    train_final_model(train_df, load_config())
 
 if __name__ == "__main__":
     train()

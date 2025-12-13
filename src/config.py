@@ -3,10 +3,9 @@ import os
 
 # Training hyperparameters
 EPOCHS = 1000
-EARLY_STOPPING_PATIENCE = 10
-BATCH_SIZE = 32
-LEARNING_RATE = 1e-4
-WEIGHT_DECAY = 1e-4
+BATCH_SIZE = 128
+LEARNING_RATE = 2e-4
+EARLY_STOPPING_PATIENCE = 20
 
 # Paths
 DATA_DIR = "./data"
@@ -14,6 +13,7 @@ INTERMEDIATE_DIR = "./intermediate"
 OUTPUT_DIR = "./output"
 
 BASELINE_MODEL_PATH = os.path.join(OUTPUT_DIR, "baseline_model.joblib")
+FINAL_MODEL_PATH = os.path.join(OUTPUT_DIR, "final_model.pth")
 
 INDIVIDUAL_PATH = os.path.join(INTERMEDIATE_DIR, 'individual_raw.csv')
 CONSENSUS_PATH = os.path.join(INTERMEDIATE_DIR, 'consensus_raw.csv')

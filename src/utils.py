@@ -2,6 +2,7 @@
 # Common helper functions used across the project.
 import logging
 import sys
+from config import EPOCHS, BATCH_SIZE, LEARNING_RATE, EARLY_STOPPING_PATIENCE
 
 def setup_logger(name=__name__):
     """
@@ -23,4 +24,9 @@ def watch(df, fn):
     return df, before - after
 
 def load_config():
-    result = {}
+    return {
+        "epochs": EPOCHS,
+        "batch_size": BATCH_SIZE,
+        "lr": LEARNING_RATE,
+        "patience": EARLY_STOPPING_PATIENCE,
+    }
