@@ -1,11 +1,5 @@
 # Deep Learning Class (VITMMA19) Project Work template
 
-## Data preparation
-
-Created a script (00-data-preparation.py) which automatically downloads the raw dataset and transforms it into the appropriate format.
-
-It runs automatically before the rest of the pipeline. As a result I didn't mount the data folder, because the data gets downloaded automatically inside the container.
-
 ## Project Details
 
 ### Project Information
@@ -13,6 +7,12 @@ It runs automatically before the rest of the pipeline. As a result I didn't moun
 - **Selected Topic**: Legal Text Decoder
 - **Student Name**: Erik Skáre (Z7ZF6D)
 - **Aiming for +1 Mark**: Yes
+
+### Data preparation
+
+Created a script (00-data-preparation.py) which automatically downloads the raw dataset and transforms it into the appropriate format.
+
+It runs automatically before the rest of the pipeline. As a result I didn't mount the data folder, because the data gets downloaded automatically inside the container.
 
 ### Solution Description
 
